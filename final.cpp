@@ -7,7 +7,7 @@ struct Tree
     Tree *left = NULL;
     Tree *right = NULL;
 };
-
+//to compare the frequencies 
 class TreeComparator
 {
   public:
@@ -16,21 +16,28 @@ class TreeComparator
         return a->frequency > b->frequency;
     }
 };
-
+//return the max sum root by adding the min 2 freq. 
 Tree *buildHuffmanTree(vector<pair<unsigned char, int> > freqtable)
 {
 
-    priority_queue<Tree *, vector<Tree *>, TreeComparator> huffqueue;
+    priority_queue<Tree *, vector<Tree *>, TreeComparator> huffqueue; // min priority queue
+    //priority_queue<Tree *, vector<Tree *>, TreeComparator> huff;
+    
     for (int i = 0; i < freqtable.size(); i++)
     {
         Tree *node = new Tree();
         node->frequency = freqtable[i].second;
         node->character = freqtable[i].first;
-        
+       //huff.push(node);
         huffqueue.push(node);
     }
-
-    
+    /*
+	while(huff.size()!=0)
+	{
+		cout<<huff.top()->frequency<<" "<<huff.top()->character<<endl;
+		huff.pop();
+	}
+    */
 
     while (huffqueue.size() > 1)
     {
@@ -74,6 +81,11 @@ string toBinary(unsigned  char a)
     
 }
 
+
+/*
+	assigning 1 to right node and 0 to left node and saving path in prev and printing it when we reach character.
+	And every char has a unique path so it wont have any path leading to it 
+*/
 void traverseHuffmanTree(Tree *root, string prev, string toAppend, map<unsigned char, string> &codemap)
 {
 
@@ -81,7 +93,7 @@ void traverseHuffmanTree(Tree *root, string prev, string toAppend, map<unsigned 
     
     if (root->right == NULL && root->left == NULL)
     {
-        // cout<<root->character<<" "<<prev<<endl;   
+        cout<<root->character<<" "<<prev<<endl;   
         codemap[root->character] = prev;
     }
     if (root->right != NULL)
@@ -97,12 +109,15 @@ void traverseHuffmanTree(Tree *root, string prev, string toAppend, map<unsigned 
 
 unsigned char *readFileIntoBuffer(char *path, int &sz)
 {
-    FILE *fp = fopen(path, "rb");
+    FILE *fp = fopen(path, "r");
     sz = 0;
+    //pointer moves to EOF
     fseek(fp, 0, SEEK_END);
+    //stores the last position
     sz = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     unsigned char *buffer = (unsigned char *)malloc(sz);
+    //used for storing a file
     fread(buffer, 1, sz, fp);
     return buffer;
 }
@@ -144,10 +159,14 @@ string getHuffmanBitstring(unsigned char *buffer, map<unsigned char, string> cod
     {
         outputBuffer=outputBuffer+codes[buffer[i]];
     }
+	//CONVERT EACH CHAR IN BUFFER TO BINARY BITSTRINGS
 
     if(outputBuffer.size()%8!=0)
     {
+    	
         int deficit = 8*((outputBuffer.size()/8)+1)-outputBuffer.size();
+        cout<<"outputBuffer.size()  "<<outputBuffer.size()<<endl;
+        cout<<"deficit  "<<deficit<<endl;
         paddedBits = deficit;
         for(int i=0; i<deficit; i++)
         {
@@ -160,14 +179,19 @@ string getHuffmanBitstring(unsigned char *buffer, map<unsigned char, string> cod
     return outputBuffer;
     
 }
+/*
+ file sizes are always measured in bytes and one byte is equal to 8 bits so arring bits to form one byte.
 
+*/
 unsigned char* getBufferFromString(string bitstring, vector<unsigned char>&outputBuffer, int& sz)
 {
     int interval = 0;
-    unsigned char bit = 0;
-
+   	unsigned char bit = 0;
+    //cout<<"bit string 0 :::::"<<bitstring<<endl;
+	//bit = (bit<<1)|(bitstring[0]-'0');
+	//cout<<"heeeeeelllllllxxxxx"<<(int)bit<<endl;
     for(int i=0; i<sz; i++)
-    {
+    {	//left shifting and or of each bit
          bit = (bit<<1)|(bitstring[i]-'0');
          
         interval++;
@@ -180,20 +204,25 @@ unsigned char* getBufferFromString(string bitstring, vector<unsigned char>&outpu
         }   
     }
     sz = outputBuffer.size();
+    //.data(); its a pointer to the first element of the output buffer
     return outputBuffer.data();
 }
-
+//converting unsigned char buffer to  string(in binary)
 string getStringFromBuffer(unsigned char* buffer, int sz)
 {
     string bitstring = ""; 
     for(int i=0; i<sz; i++)
     {
         bitstring+=toBinary(buffer[i]);
+     
     }
 
     return bitstring;
 }
 
+/*
+	mapping of binary code to char(reverse)
+*/
 unsigned char* getDecodedBuffer(string bitstring, vector<unsigned char>&buffer, map<unsigned char, string> codes, int &sz, int paddedBits)
 {
     string bit = "";
@@ -203,8 +232,8 @@ unsigned char* getDecodedBuffer(string bitstring, vector<unsigned char>&buffer, 
     {
         reversecodes[i->second] = i->first;
     }
-
-    for(int i=0; i<bitstring.size()-paddedBits; i++)
+	//converting binary bit code to char
+    for(int i=0; i<bitstring.size()-paddedBits; i++) //searching each binary bit code in map for its corresponding char if found then pushing it into the buffer
     {
         bit+=string(1, bitstring[i]);
         if(reversecodes.find(bit)!=reversecodes.end())
@@ -222,24 +251,29 @@ unsigned char* getDecodedBuffer(string bitstring, vector<unsigned char>&buffer, 
 void writeHeader(char* path,map<unsigned char, string> codes,  int paddedBits){
     
     int size = codes.size();
-    writeFileFromBuffer(path, (unsigned char*)&paddedBits, sizeof(int), 0);
+    //cout<<"paddedBits  "<<paddedBits<<endl;
+    writeFileFromBuffer(path, (unsigned char*)&paddedBits, sizeof(int), 0); //adding number of padded bits and size of the file. 
     writeFileFromBuffer(path, (unsigned char*)&size, sizeof(int), 1);
     char nullBit = '\0';
     for(map<unsigned char, string>::iterator i = codes.begin(); i!=codes.end(); i++)
     {
-        writeFileFromBuffer(path, (unsigned char*)&i->first, 1, 1);
+        writeFileFromBuffer(path, (unsigned char*)&i->first, 1, 1); //adding particular char to the file
         int len = i->second.size();
-        writeFileFromBuffer(path, (unsigned char*)&len, sizeof(int), 1);
-        writeFileFromBuffer(path, (unsigned char*)i->second.c_str(), i->second.size(), 1);
+        writeFileFromBuffer(path, (unsigned char*)&len, sizeof(int), 1); //adding the length of the code
+        writeFileFromBuffer(path, (unsigned char*)i->second.c_str(), i->second.size(), 1); //adding the code
     }
 }
 
-
+/*
+	used to read number of padded bits, size of coded file, characters and their binary codes
+*/
 unsigned char* readHeader(unsigned char* buffer, map<unsigned char, string> &codes, int& paddedBits, int &sz)
 {
    paddedBits = *((int*)buffer);
    cout<<paddedBits<<"PADDED"<<endl;
-   buffer = buffer+4;
+   cout<<"BUFFER1  "<<*((int*)buffer)<<endl;
+   buffer = buffer+4; //moving pointer position by 4 bits to point it 
+   cout<<"BUFFER2  "<<*((int*)buffer)<<endl;
    sz-=4;
    int size = *((int*)buffer);
    buffer = buffer+4;
@@ -275,7 +309,7 @@ unsigned char* readHeader(unsigned char* buffer, map<unsigned char, string> &cod
 void compressFile(char *path, char *output_path, map<unsigned char, string> &codes)
 {
     int sz = 0;
-    int paddedBits = 0;
+    int paddedBits = 0;// bits needed to make the file divisible by 8
     map<unsigned char, int> freqtable;
     unsigned char *buffer = readFileIntoBuffer(path, sz);
     for (int i = 0; i < sz; i++)
@@ -285,20 +319,22 @@ void compressFile(char *path, char *output_path, map<unsigned char, string> &cod
     Tree *root = buildHuffmanTree(convertToVector(freqtable));
     cout<<root<<endl;
     traverseHuffmanTree(root, "", "", codes);
+    //---------------------------------------------------------------
     string outputString = getHuffmanBitstring(buffer, codes, sz, paddedBits);
+    //---------------------------------------------------------------
     sz  = outputString.size();
     vector<unsigned char> outputBufferV;
-    getBufferFromString(outputString, outputBufferV, sz);
-    unsigned char* outputBuffer = outputBufferV.data();
-    writeHeader(output_path, codes, paddedBits);
-    writeFileFromBuffer(output_path, outputBuffer, sz, 1);
+    unsigned char* outputBuffer=getBufferFromString(outputString, outputBufferV, sz);
+    //unsigned char* outputBuffer = outputBufferV.data();
+    writeHeader(output_path, codes, paddedBits); //adding padded bits to the file.
+    writeFileFromBuffer(output_path, outputBuffer, sz, 1); //adding all the binary bits to the file.
 }
 
 void decompressFile( char* inputPath,  char* outputPath)
 {
     int sz = 0;
     map<unsigned char, string> codes;
-    int paddedBits = 0;
+    int paddedBits = 0; // bits needed to make the file divisible by 8
     unsigned char* fileBuffer = readFileIntoBuffer(inputPath, sz);
     fileBuffer = readHeader(fileBuffer, codes, paddedBits, sz);
     string fileBitString = getStringFromBuffer(fileBuffer, sz);
@@ -308,22 +344,14 @@ void decompressFile( char* inputPath,  char* outputPath)
     getDecodedBuffer(fileBitString,outputBufferV, codes, sz, paddedBits);
     outputBuffer = outputBufferV.data();
     writeFileFromBuffer(outputPath, outputBuffer,sz, 0);
-    //take care of appended zeroes
+   
 }
 
-int main(int argc, char* argv[])
+int main()
 {   
-    //fp state?
     char* dEI = "test.txt";
     char* dEO = "test1.txt";
     char *dDO = "decoded.txt";
-
-    if(argc==4)
-    {
-        dEI = argv[1];
-        dEO = argv[2];
-        dDO=argv[3];
-    }
     map<unsigned char, string> codes;
     compressFile(dEI, dEO, codes);
     decompressFile(dEO, dDO);
